@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.forgerock.openbanking.exercise.tpp.model.aspsp.AspspConfiguration;
 import com.forgerock.openbanking.exercise.tpp.model.oidc.AccessTokenResponse;
+import com.google.common.base.Preconditions;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.slf4j.Logger;
@@ -27,8 +28,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import uk.org.openbanking.OBHeaders;
@@ -118,7 +121,39 @@ public class RSAccountAPIService {
      */
     public OBReadAccount2 readAccounts(AspspConfiguration aspspConfiguration, String accessToken)
             throws Exception {
-        // TODO exercise: Use postman and the method createAccountRequest() to implement a similar function, that retrieves the user accounts from the RS-ASPSP
-        return null;
+        Preconditions.checkArgument(!StringUtils.isEmpty(accessToken), "Access token cannot be empty");
+        Preconditions.checkArgument(!StringUtils.isEmpty(aspspConfiguration.getDiscoveryAPILinksAccount().getGetAccounts()), "No uri for getAccounts found in ASPAS Configuration");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.add(OBHeaders.AUTHORIZATION, "Bearer " + accessToken);
+        headers.add(OBHeaders.X_FAPI_FINANCIAL_ID, aspspConfiguration.getFinancialId());
+        headers.add(OBHeaders.X_FAPI_CUSTOMER_IP_ADDRESS, "");
+        headers.add(OBHeaders.X_FAPI_INTERACTION_ID, UUID.randomUUID().toString());
+        headers.add(OBHeaders.ACCEPT, "application/json");
+        HttpEntity<OBReadRequest1> request = new HttpEntity<>(null, headers);
+
+        String getAccountsEndpoint = aspspConfiguration.getDiscoveryAPILinksAccount().getGetAccounts();
+
+        if (LOGGER.isDebugEnabled()) {
+            try {
+                LOGGER.debug("Read Accounts request: " + objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(request));
+            } catch (JsonProcessingException e) {
+                LOGGER.error("Could not print request", e);
+            }
+        }
+        LOGGER.debug("URL for read accounts: {}",getAccountsEndpoint);
+        try {
+            return restTemplate. exchange(
+                    getAccountsEndpoint,
+                    HttpMethod.GET,
+                    request,
+                    OBReadAccount2.class
+            ).getBody();
+        } catch (HttpClientErrorException e) {
+            LOGGER.error("Could not register payment to RS", e);
+            throw new Exception(e.getResponseBodyAsString(), e);
+        }
+
     }
 }
