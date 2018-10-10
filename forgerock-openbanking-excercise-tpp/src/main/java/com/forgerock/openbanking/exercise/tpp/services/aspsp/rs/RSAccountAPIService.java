@@ -133,7 +133,7 @@ public class RSAccountAPIService {
         headers.add(OBHeaders.ACCEPT, "application/json");
         HttpEntity<OBReadRequest1> request = new HttpEntity<>(null, headers);
 
-        String getAccountsEndpoint = aspspConfiguration.getDiscoveryAPILinksAccount().getGetAccounts();
+        String getAccountsUrl = aspspConfiguration.getDiscoveryAPILinksAccount().getGetAccounts();
 
         if (LOGGER.isDebugEnabled()) {
             try {
@@ -142,10 +142,10 @@ public class RSAccountAPIService {
                 LOGGER.error("Could not print request", e);
             }
         }
-        LOGGER.debug("URL for read accounts: {}",getAccountsEndpoint);
+        LOGGER.debug("URL for read accounts: {}",getAccountsUrl);
         try {
             return restTemplate. exchange(
-                    getAccountsEndpoint,
+                    getAccountsUrl,
                     HttpMethod.GET,
                     request,
                     OBReadAccount2.class
